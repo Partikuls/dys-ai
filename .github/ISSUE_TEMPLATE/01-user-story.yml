@@ -1,0 +1,99 @@
+name: 📇 User Story
+description: Template pour soumettre une nouvelle User Story.
+title: "User Story: [Titre]"
+labels: ["user story"]
+
+body:
+  - type: markdown
+    attributes:
+      value: "## 📝 Description de la User Story"
+
+  - type: dropdown
+    id: user-role
+    attributes:
+      label: 👥 Rôle d'utilisateur
+      description: "Quel est le rôle d'utilisateur impliqué dans cette User Story?"
+      options:
+        - Administrateur
+        - Partner
+        - Sub-Partner
+        - Candidat
+        - Individual
+        - Autre
+    validations:
+      required: true
+
+  - type: input
+    id: goal
+    attributes:
+      label: ⛳ Objectif
+      description: "Quel est l'objectif ou le but de cette User Story?"
+      placeholder: ex. Gérer mes comptes, voir mon historique de commandes...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: 🏆 Raison ou besoin
+      description: "Pourquoi cette User Story est-elle nécessaire? Quel besoin résout-elle?"
+      placeholder: "Décrivez la raison ou le besoin spécifique..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📜 Critères d'acceptation"
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Liste des critères d'acceptation
+      description: "Listez les critères spécifiques pour considérer cette User Story comme complétée."
+      placeholder: "1. Le système doit...\n2. L'utilisateur peut..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🎨 Visuel (si applicable)"
+
+  - type: textarea
+    id: visual
+    attributes:
+      label: Description du visuel
+      description: "Fournissez des détails sur les visuels, maquettes, ou interfaces utilisateur associés à cette User Story (si applicable)."
+      placeholder: "Décrivez tout élément visuel associé..."
+
+  - type: markdown
+    attributes:
+      value: "## 📊 Scénario Gherkin (pour les tests automatisés)"
+
+  - type: textarea
+    id: gherkin
+    attributes:
+      label: Scénario Gherkin
+      description: "Fournissez un scénario Gherkin pour cette User Story."
+      placeholder: |
+        "Feature: [Nom de la fonctionnalité]
+         As a [Rôle d'utilisateur]
+         I want [Objectif de la fonctionnalité]
+         So that [Raison ou besoin]
+
+         Scenario: [Nom du scénario]
+           Given [Contexte initial]
+           When [Événement déclencheur]
+           Then [Résultat attendu]"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: "## 📚 Références supplémentaires (si applicable)"
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Références ou liens supplémentaires
+      description: "Listez toute référence supplémentaire, comme des documents, des liens externes, ou des issues reliées."
+      placeholder: "Liens vers des documents, des issues GitHub, etc."

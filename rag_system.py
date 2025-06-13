@@ -1,17 +1,49 @@
 import openai
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import tiktoken
 
 from config import config
 from vector_store import VectorStore
 
+
 class DyslexiaRAG:
-    def __init__(self):
+    """
+    Dyslexia-focused Retrieval-Augmented Generation system.
+    
+    This class implements a specialized RAG system designed to help teachers
+    create educational content adapted for dyslexic students. It combines
+    semantic search through academic research with GPT-4o to generate
+    evidence-based teaching recommendations.
+    
+    The system focuses on:
+    - Creating directly adapted educational content
+    - Providing research-backed pedagogical recommendations
+    - Supporting French-language educational contexts
+    - Emphasizing practical classroom applications
+    
+    Attributes:
+        openai_client: OpenAI API client for embeddings and completions
+        vector_store: Vector database interface for semantic search
+        encoding: Tokenizer for managing context length limits
+        system_prompt: Specialized prompt for educational adaptation tasks
+    """
+    def __init__(self) -> None:
+        """
+        Initialize the Dyslexia RAG system.
+        
+        Sets up OpenAI client, vector store connection, tokenizer, and
+        the specialized system prompt for educational content adaptation.
+        
+        Raises:
+            openai.APIError: If OpenAI API key is invalid or API is unreachable
+            Exception: If vector store initialization fails
+        """
         self.openai_client = openai.OpenAI(api_key=config.OPENAI_API_KEY)
         self.vector_store = VectorStore()
         self.encoding = tiktoken.encoding_for_model(config.CHAT_MODEL)
         
-        # System prompt specifically for helping teachers with dyslexic students
+        # Specialized system prompt for dyslexia-focused educational adaptations
+        # This prompt ensures the AI creates direct adaptations rather than just advice
         self.system_prompt = """Vous êtes un assistant pédagogique expert spécialisé dans la création de contenu éducatif adapté aux élèves dyslexiques.
 
 Votre rôle est de CRÉER DIRECTEMENT du contenu pédagogique adapté (textes de cours, exercices, consignes) pour les élèves dyslexiques, en vous basant sur la recherche académique.
@@ -36,7 +68,24 @@ Quand vous adaptez, basez-vous sur le contexte de recherche fourni pour garantir
 IMPORTANT: Répondez TOUJOURS en français, même si la question est posée en anglais. CRÉEZ le contenu adapté, ne donnez pas de conseils."""
     
     def _construct_context(self, search_results: List[Dict[str, Any]]) -> str:
-        """Construct context from search results while staying within token limits"""
+        """
+        Construct context from search results while respecting token limits.
+        
+        Combines search results into a coherent context string for the AI,
+        prioritizing the most relevant results and staying within the configured
+        maximum context length to avoid API errors.
+        
+        Args:
+            search_results: List of search results from vector database,
+                          each containing text, source info, and metadata
+        
+        Returns:
+            str: Formatted context string with source citations, ready for AI prompt
+            
+        Note:
+            Results are processed in order of relevance. If token limit is reached,
+            remaining results are excluded to prevent API errors.
+        """
         context_parts = []
         total_tokens = 0
         max_context_tokens = config.MAX_CONTEXT_LENGTH
@@ -58,7 +107,29 @@ IMPORTANT: Répondez TOUJOURS en français, même si la question est posée en a
         return "\n---\n".join(context_parts)
     
     def query(self, question: str, include_context: bool = True) -> Dict[str, Any]:
-        """Query the RAG system with a teacher's question about dyslexia adaptations"""
+        """
+        Query the RAG system with a teacher's question about dyslexia adaptations.
+        
+        This is the main interface for the RAG system. It performs semantic search
+        through the research database, constructs an appropriate context, and generates
+        evidence-based educational recommendations using GPT-4o.
+        
+        Args:
+            question: Teacher's question about dyslexia adaptations (in French or English)
+            include_context: Whether to include research context in the response
+                           Set to False for quick responses without citations
+        
+        Returns:
+            Dict containing:
+                - answer: Generated educational recommendation (always in French)
+                - sources: List of research sources used (with relevance scores)
+                - context_used: Raw context text that was provided to the AI
+                - question: Original question for reference
+        
+        Raises:
+            openai.APIError: If OpenAI API request fails
+            Exception: For other API or processing errors (captured and returned in response)
+        """
         
         # Search for relevant documents
         search_results = self.vector_store.search(question, top_k=config.TOP_K_RESULTS)
@@ -135,14 +206,44 @@ Veuillez fournir des conseils pratiques et fondés sur des preuves pour adapter 
             }
     
     def suggest_adaptations(self, subject: str, activity_type: str) -> Dict[str, Any]:
-        """Suggest specific adaptations for a subject and activity type"""
+        """
+        Suggest specific educational adaptations for a subject and activity type.
+        
+        Convenience method that formulates an appropriate question for getting
+        subject-specific adaptation recommendations.
+        
+        Args:
+            subject: Academic subject (e.g., "mathématiques", "français")
+            activity_type: Type of educational activity (e.g., "lecture", "exercices")
+        
+        Returns:
+            Dict: Same format as query() method with adaptation recommendations
+        
+        Example:
+            >>> rag.suggest_adaptations("mathématiques", "résolution de problèmes")
+        """
         
         question = f"Comment puis-je adapter les activités de {activity_type} en {subject} pour les élèves dyslexiques ? Quels aménagements et modifications spécifiques dois-je considérer ?"
         
         return self.query(question)
     
     def get_exercise_ideas(self, topic: str, grade_level: str = "") -> Dict[str, Any]:
-        """Get ideas for dyslexia-friendly exercises on a specific topic"""
+        """
+        Generate ideas for dyslexia-friendly exercises on a specific topic.
+        
+        Provides concrete, practical exercise suggestions that are appropriate
+        for dyslexic students, with clear instructions and accessibility features.
+        
+        Args:
+            topic: Educational topic or concept to create exercises for
+            grade_level: Optional grade level specification (e.g., "élémentaire", "collège")
+        
+        Returns:
+            Dict: Same format as query() method with exercise ideas and instructions
+        
+        Example:
+            >>> rag.get_exercise_ideas("phonétique", "élémentaire")
+        """
         
         grade_part = f" pour les élèves de {grade_level}" if grade_level else ""
         question = f"Quels sont des exercices et activités efficaces et adaptés aux dyslexiques pour enseigner {topic}{grade_part} ? Veuillez fournir des exemples spécifiques avec des instructions claires."
@@ -150,14 +251,40 @@ Veuillez fournir des conseils pratiques et fondés sur des preuves pour adapter 
         return self.query(question)
     
     def get_assessment_adaptations(self, assessment_type: str) -> Dict[str, Any]:
-        """Get suggestions for adapting assessments for dyslexic students"""
+        """
+        Get suggestions for adapting assessments for dyslexic students.
+        
+        Provides specific modifications and alternative assessment methods
+        that maintain academic rigor while being accessible to dyslexic students.
+        
+        Args:
+            assessment_type: Type of assessment to adapt (e.g., "tests écrits", "examens oraux")
+        
+        Returns:
+            Dict: Same format as query() method with assessment adaptation recommendations
+        
+        Example:
+            >>> rag.get_assessment_adaptations("tests à choix multiples")
+        """
         
         question = f"Comment dois-je modifier les évaluations de type {assessment_type} pour les rendre plus accessibles aux élèves dyslexiques ? Quelles méthodes d'évaluation alternatives sont efficaces ?"
         
         return self.query(question)
 
 def format_response(response: Dict[str, Any]) -> str:
-    """Format the RAG response for display"""
+    """
+    Format RAG system response for console display.
+    
+    Creates a well-structured, readable format for displaying AI-generated
+    educational recommendations along with source citations.
+    
+    Args:
+        response: Response dictionary from DyslexiaRAG.query() or related methods
+    
+    Returns:
+        str: Formatted response ready for console output with headers,
+             content sections, and source citations
+    """
     output = []
     
     output.append("=" * 60)
